@@ -156,7 +156,7 @@ where
                 "Press Shift+E to enter the level editor",
                 cache,
                 &DrawState::default(),
-                c.transform.trans(455.0, 487.),
+                c.transform.trans(442.0, 488.),
                 g,
             );
         }
