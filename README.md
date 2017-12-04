@@ -4,6 +4,8 @@
 
 Propan is a game. Likely an odd one.
 
+[View on itch.io](https://e-net4.itch.io/propan)
+
 ## How did this game come to life?
 
 Propan was spiritually influenced by the game Helious from the early 90's. An urban legend tells that the game's creator, Sean Puckett, is not the original developer of the game, but that a UFO visited his house and the game was transferred to his computer by aliens during a stormy night. This enabled the peculiar story to be subtitled "How to Produce a Game in Eight Days." 
