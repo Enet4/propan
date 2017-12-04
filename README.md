@@ -1,5 +1,7 @@
 # Propan
 
+[![Build Status](https://travis-ci.org/Enet4/propan.svg?branch=master)](https://travis-ci.org/Enet4/propan)
+
 Propan is a game. Likely an odd one.
 
 ## How did this game come to life?
