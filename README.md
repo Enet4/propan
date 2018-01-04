@@ -4,6 +4,8 @@
 
 Propan is a game. Likely an odd one.
 
+![](https://img.itch.zone/aW1hZ2UvMTk4OTAyLzkzMzUwMi5wbmc=/347x500/uasNwE.png)
+
 [View on itch.io](https://e-net4.itch.io/propan)
 
 ## How did this game come to life?
