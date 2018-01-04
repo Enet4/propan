@@ -122,6 +122,11 @@ where
                     (Key::Escape, ButtonState::Press, _) => {
                         return Some(ControllerAction::LoadTitleScreen);
                     }
+                    (Key::Return, ButtonState::Press, _) | (Key::Space, ButtonState::Press, _) => {
+                        if self.ball.is_dead() || self.finish.as_ref().map(|f| f.is_picked_up()).unwrap_or(false) {
+                            return Some(ControllerAction::LoadTitleScreen);
+                        }
+                    }
                     (_k, _state, _scancode) => {
                         //println!("KEY: {:?}, STATE: {:?}. SCANCODE: {:?}", k, state, scancode);
                     }

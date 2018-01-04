@@ -261,6 +261,10 @@ where
         })
     }
 
+    pub fn is_picked_up(&self) -> bool {
+        self.picked_up
+    }
+
     pub fn draw<G>(&self, ctx: Context, g: &mut G)
     where
         G: Graphics<Texture=GameTexture<R>>
