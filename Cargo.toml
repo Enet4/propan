@@ -8,12 +8,12 @@ license = "MIT or Apache-2.0"
 clap = "2.28.0"
 failure = "0.1.0"
 failure_derive = "0.1.0"
-gfx = "0.16.1"
-gfx_device_gl = "0.14.4"
+gfx = "0.17.1"
+gfx_device_gl = "0.15.2"
 itertools = "0.7.3"
 piston = "0.35.0"
-piston2d-gfx_graphics = "0.46.0"
-piston2d-graphics = "0.23.0"
+piston2d-gfx_graphics = "0.51.0"
+piston2d-graphics = "0.26.0"
 pistoncore-glutin_window = "0.42.0"
 serde = "1.0.20"
 serde_derive = "1.0.20"
@@ -21,8 +21,8 @@ serde_json = "1.0.6"
 
 [dependencies.conrod]
 features = ["piston"]
-version = "0.56.0"
+version = "0.59.0"
 
 [dependencies.nalgebra]
 features = ["serde-serialize"]
-version = "0.13.1"
+version = "0.14.3"
