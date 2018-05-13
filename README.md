@@ -1,6 +1,6 @@
 # Propan
 
-[![Build Status](https://travis-ci.org/Enet4/propan.svg?branch=master)](https://travis-ci.org/Enet4/propan)
+[![Build Status](https://travis-ci.org/Enet4/propan.svg?branch=master)](https://travis-ci.org/Enet4/propan) [![dependency status](https://deps.rs/repo/github/Enet4/propan/status.svg)](https://deps.rs/repo/github/Enet4/propan)
 
 Propan is a game. Likely an odd one.
 
