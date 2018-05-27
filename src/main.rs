@@ -1,6 +1,7 @@
 extern crate clap;
 #[macro_use]
 extern crate derive_builder;
+#[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;

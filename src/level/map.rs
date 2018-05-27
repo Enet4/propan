@@ -27,10 +27,6 @@ impl Map {
         Map { width, height }
     }
 
-    pub fn dimensions(&self) -> Vector2<u32> {
-        [self.width, self.height].into()
-    }
-
     pub fn dimensions_f32(&self) -> Vector2<f32> {
         Vector2::new(self.width as f32, self.height as f32)
     }

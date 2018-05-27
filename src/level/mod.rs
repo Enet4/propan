@@ -5,6 +5,7 @@ use controller::LevelId;
 use itertools::process_results;
 use na::Vector2;
 use serde_json::{from_reader, to_writer_pretty as to_writer};
+use util::DynResult;
 
 mod v0;
 pub mod info;
@@ -14,8 +15,6 @@ pub use self::map::Map;
 use self::info::*;
 
 pub const CURRENT_VERSION: &str = "1.0";
-
-type DynResult<T> = Result<T, Box<(::std::error::Error + 'static)>>;
 
 pub fn load_all_level_paths<P: AsRef<Path>>(dir: P) -> DynResult<Vec<PathBuf>> {
     let entries = read_dir(dir)?;
@@ -80,10 +79,6 @@ impl GameLevelHeader {
     pub fn version(&self) -> &str {
         &self.version
     }
-
-    pub fn set_version<V: Into<String>>(&mut self, v: V) {
-        self.version = v.into();
-    }
 }
 
 /// Game level.
@@ -135,7 +130,7 @@ impl GameLevel {
                 let game: GameLevel = from_reader(file)?;
                 Ok(game)
             }
-            v => Err(format!("Unsupported level version {}", v).into())
+            v => Err(format_err!("Unsupported level version {}", v))
         }
     }
 
@@ -143,7 +138,7 @@ impl GameLevel {
         let paths = load_all_level_paths(dir)?;
         match paths.get(id as usize) {
             Some(p) => GameLevel::load(p),
-            None => Err("No such Level".into()),
+            None => Err(format_err!("No such Level")),
         }
     }
 

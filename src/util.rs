@@ -1,6 +1,8 @@
 use na::Vector2;
 use std::fmt::Debug;
 
+pub type DynResult<T> = Result<T, ::failure::Error>;
+
 pub fn default_vector2<T>() -> Vector2<T>
 where
     T: Debug + Copy + Default + PartialEq + 'static

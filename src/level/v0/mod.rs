@@ -1,15 +1,13 @@
 //! Module for legacy level version: v1
 pub mod info;
 pub mod map;
+use self::info::*;
 use self::map::Map;
 use super::{
     GameLevel as CurrentGameLevel, GameLevelBuilder as CurrentGameLevelBuilder, CURRENT_VERSION,
 };
 use na::Vector2;
-
-use self::info::*;
-
-type DynResult<T> = Result<T, Box<(::std::error::Error + 'static)>>;
+use util::DynResult;
 
 /// Game level.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,7 +47,10 @@ impl GameLevel {
         let mut lvl = CurrentGameLevelBuilder::default();
         lvl.name(self.name);
         lvl.version(CURRENT_VERSION.to_string());
-        lvl.ball_pos(Vector2::from([self.ball_pos[0] as i32, self.ball_pos[1] as i32]));
+        lvl.ball_pos(Vector2::from([
+            self.ball_pos[0] as i32,
+            self.ball_pos[1] as i32,
+        ]));
         lvl.map(self.map.upgrade());
         lvl.walls(self.walls.into_iter().map(|x| x.upgrade()).collect());
         lvl.pumps(self.pumps.into_iter().map(|x| x.upgrade()).collect());
@@ -57,7 +58,7 @@ impl GameLevel {
         lvl.gems(self.gems.into_iter().map(|x| x.upgrade()).collect());
         lvl.finish(self.finish.map(|x| x.upgrade()));
 
-        let lvl = lvl.build()?;
+        let lvl = lvl.build().map_err(::failure::err_msg)?;
         Ok(lvl)
     }
 }

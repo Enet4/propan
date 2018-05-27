@@ -1,4 +1,3 @@
-use na::Vector2;
 use level::map::Map as CurrentMap;
 
 const DEFAULT_WIDTH: f32 = 320.;
@@ -21,10 +20,6 @@ impl Default for Map {
 }
 
 impl Map {
-    pub fn dimensions(&self) -> Vector2<f32> {
-        [self.width, self.height].into()
-    }
-
     pub fn upgrade(self) -> CurrentMap {
         CurrentMap::new(self.width as u32, self.height as u32)
     }
