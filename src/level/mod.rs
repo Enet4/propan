@@ -6,11 +6,14 @@ use itertools::process_results;
 use na::Vector2;
 use serde_json::{from_reader, to_writer_pretty as to_writer};
 
+mod v0;
 pub mod info;
 pub mod map;
 pub use self::map::Map;
 
 use self::info::*;
+
+pub const CURRENT_VERSION: &str = "1.0";
 
 type DynResult<T> = Result<T, Box<(::std::error::Error + 'static)>>;
 
@@ -34,12 +37,62 @@ pub fn load_all_levels<P: AsRef<Path>>(dir: P) -> DynResult<Vec<GameLevel>> {
         .collect()
 }
 
-/// Game level.
+pub fn load_all_level_headers<P: AsRef<Path>>(dir: P) -> DynResult<Vec<GameLevelHeader>> {
+    load_all_level_paths(dir)?.into_iter()
+        .map(GameLevelHeader::from_file)
+        .collect()
+}
+
+/// Serializable data type with the bare minimum compatible subset of game
+/// level versions. This is used to check which level version should be
+/// loaded.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameLevelHeader {
+    name: String,
+    #[serde(default = "GameLevelHeader::default_version")]
+    version: String,
+}
+
+impl Default for GameLevelHeader {
+    fn default() -> Self {
+        GameLevelHeader {
+            name: "No Name".to_string(),
+            version: CURRENT_VERSION.to_string(),
+        }
+    }
+}
+
+impl GameLevelHeader {
+    pub fn default_version() -> String {
+        "0.1".to_string()
+    }
+
+    pub fn from_file<P: AsRef<Path>>(path: P) -> DynResult<Self> {
+        let file = File::open(path)?;
+        let game = from_reader(file)?;
+        Ok(game)
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn version(&self) -> &str {
+        &self.version
+    }
+
+    pub fn set_version<V: Into<String>>(&mut self, v: V) {
+        self.version = v.into();
+    }
+}
+
+/// Game level.
+#[derive(Debug, Clone, Builder, Serialize, Deserialize)]
 pub struct GameLevel {
     name: String,
+    version: String,
     map: Map,
-    ball_pos: Vector2<f32>,
+    ball_pos: Vector2<i32>,
     #[serde(default)] walls: Vec<WallInfo>,
     #[serde(default)] pumps: Vec<PumpInfo>,
     #[serde(default)] mines: Vec<MineInfo>,
@@ -49,9 +102,11 @@ pub struct GameLevel {
 
 impl Default for GameLevel {
     fn default() -> GameLevel {
+        let header = GameLevelHeader::default();
         GameLevel {
-            name: "No Name".to_string(),
-            ball_pos: [36., 36.].into(),
+            name: header.name,
+            version: header.version,
+            ball_pos: [36, 36].into(),
             map: Map::default(),
             walls: Vec::new(),
             pumps: Vec::new(),
@@ -65,9 +120,23 @@ impl Default for GameLevel {
 impl GameLevel {
 
     pub fn load<P: AsRef<Path>>(path: P) -> DynResult<Self> {
-        let file = File::open(path)?;
-        let game = from_reader(file)?;
-        Ok(game)
+        // read as a header first
+        let file = File::open(&path)?;
+        let header: GameLevelHeader = from_reader(file)?;
+        match header.version() {
+            "0.1" => {
+                // read in legacy format, then convert to new format
+                let file = File::open(path)?;
+                let game: v0::GameLevel = from_reader(file)?;
+                game.upgrade()
+            }
+            "1.0" => {
+                let file = File::open(path)?;
+                let game: GameLevel = from_reader(file)?;
+                Ok(game)
+            }
+            v => Err(format!("Unsupported level version {}", v).into())
+        }
     }
 
     pub fn load_by_index<P: AsRef<Path>>(dir: P, id: LevelId) -> DynResult<Self> {
@@ -87,8 +156,16 @@ impl GameLevel {
         &self.name
     }
 
-    pub fn name_mut(&mut self) -> &mut String {
-        &mut self.name
+    pub fn set_name<T: Into<String>>(&mut self, name: T) {
+        self.name = name.into();
+    }
+
+    pub fn version(&self) -> &str {
+        &self.version
+    }
+
+    pub fn set_version<V: Into<String>>(&mut self, v: V) {
+        self.version = v.into();
     }
 
     pub fn map(&self) -> &Map {
@@ -100,11 +177,12 @@ impl GameLevel {
     }
 
     pub fn ball_position(&self) -> Vector2<f32> {
-        self.ball_pos
+        Vector2::new(self.ball_pos[0] as f32, self.ball_pos[1] as f32)
     }
 
-    pub fn ball_position_mut(&mut self) -> &mut Vector2<f32> {
-        &mut self.ball_pos
+    pub fn set_ball_position(&mut self, pos: Vector2<f32>) {
+        self.ball_pos[0] = pos[0] as i32;
+        self.ball_pos[1] = pos[1] as i32;
     }
 
     pub fn walls(&self) -> &[WallInfo] {

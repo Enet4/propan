@@ -1,14 +1,14 @@
 use na::Vector2;
 use physics::{UpBorder, LeftBorder, RightBorder, DownBorder};
 
-const DEFAULT_WIDTH: f32 = 320.;
-const DEFAULT_HEIGHT: f32 = 200.;
+const DEFAULT_WIDTH: u32 = 320;
+const DEFAULT_HEIGHT: u32 = 200;
 
 /// Data type for the game map, containing moving things n stuff
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Map {
-    width: f32,
-    height: f32,
+    width: u32,
+    height: u32,
 }
 
 impl Default for Map {
@@ -21,13 +21,27 @@ impl Default for Map {
 }
 
 impl Map {
-    pub fn dimensions(&self) -> Vector2<f32> {
+    pub fn new(width: u32, height: u32) -> Self {
+        assert!(width > 0);
+        assert!(height > 0);
+        Map { width, height }
+    }
+
+    pub fn dimensions(&self) -> Vector2<u32> {
         [self.width, self.height].into()
     }
 
-    pub fn expand_to_fit(&mut self, dim: Vector2<f32>) {
-        self.width = f32::max(self.width, dim[0]);
-        self.height = f32::max(self.height, dim[1]);
+    pub fn dimensions_f32(&self) -> Vector2<f32> {
+        Vector2::new(self.width as f32, self.height as f32)
+    }
+
+    pub fn expand_to_fit(&mut self, dim: Vector2<i32>) {
+        if dim[0] > 0 {
+            self.width = u32::max(self.width, dim[0] as u32);
+        }
+        if dim[1] > 0 {
+            self.height = u32::max(self.height, dim[1] as u32);
+        }
     }
 
     pub fn up_border(&self) -> UpBorder {
@@ -35,7 +49,7 @@ impl Map {
     }
 
     pub fn down_border(&self) -> DownBorder {
-        DownBorder(self.height)
+        DownBorder(self.height as f32)
     }
 
     pub fn left_border(&self) -> LeftBorder {
@@ -43,6 +57,6 @@ impl Map {
     }
 
     pub fn right_border(&self) -> RightBorder {
-        RightBorder(self.width)
+        RightBorder(self.width as f32)
     }
 }

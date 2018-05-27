@@ -9,7 +9,7 @@ pub use self::audio::{AudioManage, AudioManager};
 
 pub type Result<T> = ::std::result::Result<T, ResourceError>;
 
-pub type GameTexture<T: ResourceManage> = <T::Sprite as SpriteManage>::Texture;
+pub type GameTexture<T> = <<T as ResourceManage>::Sprite as SpriteManage>::Texture;
 
 #[derive(Debug, Fail)]
 pub enum ResourceError {

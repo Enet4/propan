@@ -21,8 +21,8 @@ where
     pub fn new(info: WallInfo, res: R) -> Result<Self> {
         let gfx_tex = res.sprite().get_sprite(AssetId::Other(info.texture_id))?;
         Ok(Wall {
-            pos: info.pos,
-            dim: info.dim,
+            pos: Vector2::new(info.pos[0] as f32, info.pos[1] as f32),
+            dim: Vector2::new(info.dim[0] as f32, info.dim[1] as f32),
             gfx_tex,
         })
     }

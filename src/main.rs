@@ -1,4 +1,6 @@
 extern crate clap;
+#[macro_use]
+extern crate derive_builder;
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
@@ -54,9 +56,11 @@ use resource::{AudioManager, ResourceManage, ResourceManager, SpriteManage, Spri
 type ColorFormat = Srgba8;
 type DepthFormat = gfx::format::DepthStencil;
 
-pub static WIDTH: u16 = 320;
-pub static HEIGHT: u16 = 200;
-pub const PIXEL_SCALE: f32 = 800.0 / 320.0;
+pub const WIDTH: u16 = 320;
+pub const HEIGHT: u16 = 200;
+pub const PHYSICAL_WIDTH: u16 = 960;
+pub const PHYSICAL_HEIGHT: u16 = 600;
+pub const PIXEL_SCALE: f32 = PHYSICAL_WIDTH as f32 / WIDTH as f32;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GameState {
@@ -84,8 +88,8 @@ fn main() {
     // configure window
     let opengl = OpenGL::V3_2;
 
-    let phys_width: u32 = 800;
-    let phys_height: u32 = 500;
+    let phys_width: u32 = PHYSICAL_WIDTH as u32;
+    let phys_height: u32 = PHYSICAL_HEIGHT as u32;
     let samples = 4;
     let mut window: GlutinWindow = WindowSettings::new("propan", [phys_width, phys_height])
         .srgb(false)

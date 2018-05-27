@@ -26,7 +26,7 @@ where
     pub fn new(info: PumpInfo, resource_manager: R) -> Result<Self> {
         let gfx_img = resource_manager.sprite().get_sprite(AssetId::Pump)?;
         Ok(Pump {
-            pos: info.pos,
+            pos: Vector2::new(info.pos[0] as f32, info.pos[1] as f32),
             gfx_img,
             time_to_pump: 0.,
             rot: 0.,
@@ -119,7 +119,7 @@ where
     pub fn new(info: MineInfo, resource_manager: R) -> Result<Self> {
         let gfx_img = resource_manager.sprite().get_sprite(AssetId::Mine)?;
         Ok(Mine {
-            pos: info.pos,
+            pos: Vector2::new(info.pos[0] as f32, info.pos[1] as f32),
             gfx_img,
             res: resource_manager,
         })
@@ -178,7 +178,7 @@ where
     pub fn new(info: GemInfo, resource_manager: R) -> Result<Self> {
         let gfx_img = resource_manager.sprite().get_sprite(AssetId::Gem)?;
         Ok(Gem {
-            pos: info.pos,
+            pos: Vector2::new(info.pos[0] as f32, info.pos[1] as f32),
             gfx_img,
             picked_up: false,
         })
@@ -253,7 +253,7 @@ where
         let gfx_img = resource_manager.sprite().get_sprite(AssetId::Flag)?;
         let gfx_img_check = resource_manager.sprite().get_sprite(AssetId::Check)?;
         Ok(Finish {
-            pos: info.pos,
+            pos: Vector2::new(info.pos[0] as f32, info.pos[1] as f32),
             gfx_img,
             gfx_img_check,
             picked_up: false,

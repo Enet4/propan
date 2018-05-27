@@ -41,7 +41,7 @@ where
         let ball = Ball::with_default_size(level.ball_position());
         let ball = BallController::new(ball, resource_manager)?;
         let mut camera = Camera::default();
-        camera.focus_on(level.ball_position(), level.map().dimensions());
+        camera.focus_on(level.ball_position(), level.map().dimensions_f32());
 
         let walls: Result<Vec<_>> = level
             .walls()
@@ -192,7 +192,7 @@ where
         // and update the ball
         self.ball.update(ticks);
 
-        let map_dim = self.level.map().dimensions();
+        let map_dim = self.level.map().dimensions_f32();
         self.camera.focus_on(self.ball.position(), map_dim);
 
         None

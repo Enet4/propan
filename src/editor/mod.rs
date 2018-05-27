@@ -11,9 +11,12 @@ use piston::input::{GenericEvent, UpdateArgs};
 use controller::{Controller, ControllerAction};
 use resource::{GameTexture, ResourceManage, Result, SpriteAssetId, SpriteManage};
 use physics::{Collidable, SimpleCollidable};
+use ::PIXEL_SCALE;
 
 mod placeholder;
 use self::placeholder::*;
+
+const VERSION: &str = "1.0";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum EditState {
@@ -55,7 +58,9 @@ where
     R: ResourceManage + Copy,
 {
     pub fn new(resource_manager: R) -> Result<Self> {
-        LevelEditorController::with_level(GameLevel::default(), resource_manager)
+        let mut lvl = GameLevel::default();
+        lvl.set_version(VERSION); 
+        LevelEditorController::with_level(lvl, resource_manager)
     }
 
     pub fn load<P: AsRef<Path>>(path: P, resource_manager: R) -> Result<Self> {
@@ -68,7 +73,7 @@ where
         let ball = Ball::with_default_size(level.ball_position());
         let ball = BallController::new(ball, resource_manager)?;
         let mut camera = Camera::default();
-        camera.focus_on(level.ball_position(), level.map().dimensions());
+        camera.focus_on(level.ball_position(), level.map().dimensions_f32());
 
         let walls: Result<Vec<_>> = level
             .walls()
@@ -153,6 +158,8 @@ where
                 pos[0] = pos[0].round();
                 pos[1] = pos[1].round();
                 pos *= 4.;
+                let pos = Vector2::new(pos[0] as i32, pos[1] as i32);
+                let dim = Vector2::new(dim[0] as i32, dim[1] as i32);
 
                 // create info and entity
                 let info = WallInfo {
@@ -174,6 +181,7 @@ where
                 Ok(())
             }
             ObjectPlaceholder::Mine => {
+                let pos = Vector2::new(pos[0] as i32, pos[1] as i32);
                 let info = MineInfo { pos };
                 // add to map
                 let mine = entities::Mine::new(info.clone(), self.res)?;
@@ -184,6 +192,7 @@ where
                 Ok(())
             }
             ObjectPlaceholder::Pump => {
+                let pos = Vector2::new(pos[0] as i32, pos[1] as i32);
                 let info = PumpInfo { pos };
                 // add to map
                 let pump = entities::Pump::new(info.clone(), self.res)?;
@@ -194,6 +203,7 @@ where
                 Ok(())
             }
             ObjectPlaceholder::Gem => {
+                let pos = Vector2::new(pos[0] as i32, pos[1] as i32);
                 let info = GemInfo { pos };
                 // add to map
                 let gem = entities::Gem::new(info.clone(), self.res)?;
@@ -210,10 +220,11 @@ where
             ObjectPlaceholder::Ball => {
                 // just redefine the position
                 self.ball.set_position(pos);
-                *self.level.ball_position_mut() = pos;
+                self.level.set_ball_position(pos);
                 Ok(())
             }
             ObjectPlaceholder::Finish => {
+                let pos = Vector2::new(pos[0] as i32, pos[1] as i32);
                 if let Some(f) = self.finish.as_mut() {
                     // redefine position in level
                     let info = self.level.finish_flag_mut().unwrap();
@@ -301,6 +312,23 @@ where
         }
 
         false
+    }
+
+    fn save(&mut self) {
+        let mut filepath: PathBuf = Default::default();
+        let mut s = Default::default();
+        self.level.set_version(VERSION);
+        for i in 0_u16.. {
+            s = format!("levels/{}.json", i);
+            let path = Path::new(&s).to_path_buf();
+            if !path.exists() {
+                filepath = path;
+                break;
+            }
+        }
+        self.level.set_name(&*s);
+        self.level.save(filepath).unwrap();
+        println!("Saved level to {}", s);
     }
 }
 
@@ -398,7 +426,7 @@ where
                 let mut delta = self.cursor - newcursor;
                 delta /= ::PIXEL_SCALE;
                 self.camera.pan(delta);
-                self.camera.clamp_to_bounds(self.level.map().dimensions());
+                self.camera.clamp_to_bounds(self.level.map().dimensions_f32());
             }
 
             self.cursor = newcursor;
@@ -441,19 +469,7 @@ where
         if let Some(k) = e.text_args() {
             if k == "S" || k == "s" {
                 // save here
-                let mut filepath: PathBuf = Default::default();
-                let mut s = Default::default();
-                for i in 0_u16.. {
-                    s = format!("levels/{}.json", i);
-                    let path = Path::new(&s).to_path_buf();
-                    if !path.exists() {
-                        filepath = path;
-                        break;
-                    }
-                }
-                *self.level.name_mut() = s.clone();
-                self.level.save(filepath).unwrap();
-                println!("Saved level to {}", s);
+                self.save();
             }
         }
 

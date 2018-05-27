@@ -1,10 +1,10 @@
 use graphics::{Context, DrawState, Graphics, Image, Text, Transformed};
 use graphics::character::CharacterCache;
 use piston::input::{GenericEvent, UpdateArgs};
-use level::load_all_levels;
+use level::load_all_level_headers;
 use resource::{GameTexture, ResourceManage, Result, SpriteAssetId, SpriteManage};
 use controller::{Controller, ControllerAction, LevelId};
-use level::GameLevel;
+use level::GameLevelHeader;
 
 const WINDOW_SIZE: usize = 8;
 
@@ -16,7 +16,7 @@ where
     title_tex: GameTexture<R>,
     logo_tex: GameTexture<R>,
     logo_pos: f64,
-    level_list: Vec<GameLevel>,
+    level_list: Vec<GameLevelHeader>,
     selected: Option<u32>,
 }
 
@@ -59,7 +59,8 @@ where
                     }
                     (false, _, ButtonState::Press) => {
                         // load levels
-                        self.level_list = load_all_levels("levels").unwrap();
+                        // TODO do not unwrap this error, treat this better
+                        self.level_list = load_all_level_headers("levels").unwrap();
                         self.selected = Some(0);
                     }
                     (true, Key::Return, ButtonState::Press) |
@@ -156,7 +157,7 @@ where
                 "Press Shift+E to enter the level editor",
                 cache,
                 &DrawState::default(),
-                c.transform.trans(442.0, 488.),
+                c.transform.trans(550., 582.),
                 g,
             );
         }
