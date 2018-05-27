@@ -7,7 +7,7 @@ version = "0.1.2"
 [dependencies]
 clap = "2.28.0"
 derive_builder = "0.5.1"
-failure = "0.1.0"
+failure = "0.1.1"
 failure_derive = "0.1.0"
 gfx = "0.17.1"
 gfx_device_gl = "0.15.2"
