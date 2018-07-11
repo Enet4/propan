@@ -222,8 +222,11 @@ where
 
         // resolve collisions
         if self.num_overlaps > 0 {
+            // average the collision vectors
             let overlap = self.acc_overlaps / self.num_overlaps as f32;
             self.correct_and_rigid_bounce(overlap);
+            // dampen velocity a little bit
+            self.ball.decay_velocity(4e-3);
             self.acc_overlaps = default_vector2();
             self.num_overlaps = 0;
         }
