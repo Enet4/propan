@@ -189,11 +189,12 @@ where
             self.ball.handle_simple_collision_with(finish);
         }
 
-        // and update the ball
+        // update the ball
         self.ball.update(ticks);
 
+        // update the camera's position
         let map_dim = self.level.map().dimensions_f32();
-        self.camera.focus_on(self.ball.position(), map_dim);
+        self.camera.soft_focus_on(self.ball.position(), map_dim);
 
         None
     }

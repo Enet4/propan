@@ -38,9 +38,44 @@ impl Camera {
         self.pos[1] = self.pos[1].round();
     }
 
+    /// Move the camera so that the focus point lies at the center (except when
+    /// touching the map's boundaries).
     pub fn focus_on(&mut self, focus: Vector2<f32>, map_dim: Vector2<f32>) {
         let point = self.focus_point(focus, map_dim);
         self.pos = [point[0] - self.half_width, point[1] - self.half_height].into();
+    }
+
+    /// Move the camera just enough to have the focus point sufficiently inside
+    /// the viewport (still without crossing the map's boundaries).
+    pub fn soft_focus_on(&mut self, focus: Vector2<f32>, map_dim: Vector2<f32>) {
+        // do this one axis at a time
+
+        // x
+        const MARGIN_W: f32 = 120.;
+
+        let rx = focus[0] - self.pos[0] - MARGIN_W;
+        if rx < 0. {
+            self.pos[0] += rx;
+        }
+
+        let rx = focus[0] - (self.pos[0] + self.width - MARGIN_W);
+        if rx > 0. {
+            self.pos[0] += rx;
+        }
+
+        // y
+        const MARGIN_H: f32 = 80.;
+        let ry = focus[1] - self.pos[1] - MARGIN_H;
+        if ry < 0. {
+            self.pos[1] += ry;
+        }
+
+        let ry = focus[1] - (self.pos[1] + self.height - MARGIN_H);
+        if ry > 0. {
+            self.pos[1] += ry;
+        }
+
+        self.clamp_to_bounds(map_dim);
     }
 
     pub fn pan<V>(&mut self, v: V)
