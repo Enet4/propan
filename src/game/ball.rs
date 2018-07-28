@@ -133,21 +133,20 @@ impl Ball {
         }
 
         let color = if self.size < 5.5 {
-            [0.75, 0.6, 0.9, 1.0]
+            [0.7, 0.5, 0.9, 1.0]
         } else if self.size > BALL_CAPACITY - 2.5 {
             [0.7, 0.88, 1.0, 0.8]
         } else {
             [0.5, 0.86, 1.0, 1.0]
         };
         let (x, y) = (self.pos[0] as f64, self.pos[1] as f64);
-        let size = self.size as f64;
         let hsize = (self.size / 2.) as f64;
-
+        let draw_size = (self.size + 4.) as f64;
         let r = [
-            (x - hsize - 2.),
-            (y - hsize - 2.),
-            (size + 4.),
-            (size + 4.),
+            x - hsize - 2.,
+            y - hsize - 2.,
+            draw_size,
+            draw_size,
         ];
 
         ellipse(color, r, ctx.transform, gfx);
