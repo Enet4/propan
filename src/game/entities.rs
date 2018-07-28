@@ -159,7 +159,8 @@ where
     }
 }
 
-pub const GEM_SIZE: f32 = 24.;
+pub const GEM_SIZE_W: f32 = 24.;
+pub const GEM_SIZE_H: f32 = 28.;
 
 pub struct Gem<R>
 where
@@ -192,18 +193,18 @@ where
             return;
         }
 
-        let size = GEM_SIZE as f64;
         let (x, y) = (self.pos[0] as f64, self.pos[1] as f64);
         let (w, h) = self.gfx_img.get_size();
         let (w, h) = (w as f32, h as f32);
         let (hw, hh) = (w / 2., h / 2.);
-        let w_scale = GEM_SIZE / w;
-        let h_scale = GEM_SIZE / h;
+        let w_scale = GEM_SIZE_W / w;
+        let h_scale = GEM_SIZE_H / h;
 
+        let x_pos = (self.pos[0] - hw) as f64;
+        let y_pos = (self.pos[1] - hh) as f64;
         let ctx = ctx
-            .trans(x as f64, y as f64)
-            .scale(w_scale.into(), h_scale.into())
-            .trans(-hw as f64, -hh as f64);
+            .trans(x_pos, y_pos)
+            .scale(w_scale.into(), h_scale.into());
         Image::new().draw(&self.gfx_img, &DrawState::default(), ctx.transform, g);
     }
 }
@@ -215,7 +216,7 @@ where
     fn test_circle_collision_simple(&self, position: Vector2<f32>, radius: f32) -> bool {
         if self.picked_up { return false; }
 
-        let d = GEM_SIZE / 2. + radius + 1.;
+        let d = GEM_SIZE_W / 2. + radius + 1.;
         norm_squared(&(self.pos - position)) <= d * d
     }
 

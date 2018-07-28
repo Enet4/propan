@@ -11,7 +11,6 @@ use piston::input::{GenericEvent, UpdateArgs};
 use controller::{Controller, ControllerAction};
 use resource::{GameTexture, ResourceManage, Result, SpriteAssetId, SpriteManage};
 use physics::{Collidable, SimpleCollidable};
-use ::PIXEL_SCALE;
 
 mod placeholder;
 use self::placeholder::*;
@@ -559,10 +558,13 @@ where
                 let color = [0.8, 0.2, 0.7, 0.75];
                 let point = point * ::PIXEL_SCALE;
                 let (x, y) = (point[0] as f64, point[1] as f64);
-                let size = entities::GEM_SIZE * ::PIXEL_SCALE;
-                let size = size as f64;
-                let hsize = size / 2.;
-                let r = [(x - hsize - 2.5), (y - hsize), size, size + 5.];
+                let size_w = entities::GEM_SIZE_W * ::PIXEL_SCALE;
+                let size_w = size_w as f64;
+                let hsize_w = size_w / 2.;
+                let size_h = entities::GEM_SIZE_H * ::PIXEL_SCALE;
+                let size_h = size_h as f64;
+                let hsize_h = size_h / 2.;
+                let r = [(x - hsize_w - 2.5), (y - hsize_h), size_w, size_h];
                 ellipse(color, r, c.transform, g);
             }
             ObjectPlaceholder::Ball => {
