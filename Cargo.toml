@@ -26,4 +26,4 @@ version = "0.59.0"
 
 [dependencies.nalgebra]
 features = ["serde-serialize"]
-version = "0.14.3"
+version = "0.16.0"
