@@ -421,15 +421,16 @@ where
         }
         if let Some(m) = e.mouse_cursor_args() {
             let newcursor: Vector2<f32> = [m[0] as f32, m[1] as f32].into();
+            let pixel_scale = 2.;
             if self.state == EditState::Panning {
                 let mut delta = self.cursor - newcursor;
-                delta /= ::PIXEL_SCALE;
+                delta /= pixel_scale;
                 self.camera.pan(delta);
                 self.camera.clamp_to_bounds(self.level.map().dimensions_f32());
             }
 
             self.cursor = newcursor;
-            self.logical_cursor = self.camera.position() + self.cursor / ::PIXEL_SCALE;
+            self.logical_cursor = self.camera.position() + self.cursor / pixel_scale;
         }
 
         if let Some(_m) = e.cursor_args() {
@@ -514,7 +515,10 @@ where
         G: Graphics<Texture = GameTexture<R>>,
     {
         let mut point = self.logical_cursor - self.camera.position();
-
+        let viewport = c.viewport.unwrap();
+        let pixel_scale_w = viewport.window_size[0] as f32 / ::WIDTH as f32;
+        let pixel_scale_h = viewport.window_size[1] as f32 / ::HEIGHT as f32;
+        let pixel_scale = Vector2::from([pixel_scale_w, pixel_scale_h]);
         match self.placeholder {
             ObjectPlaceholder::Wall { dim, .. } => {
                 let color = [0.25, 0.265, 0.3, 0.75];
@@ -524,70 +528,56 @@ where
                 point[1] = point[1].round();
                 point *= 4.;
 
-                let point = point * ::PIXEL_SCALE;
+                let point = [point[0] * pixel_scale_w, point[1] * pixel_scale_h];
                 let (x, y) = (point[0] as f64, point[1] as f64);
                 let r = [
                     x,
                     y,
-                    (dim[0] * ::PIXEL_SCALE) as f64,
-                    (dim[1] * ::PIXEL_SCALE) as f64,
+                    (dim[0] * pixel_scale_w) as f64,
+                    (dim[1] * pixel_scale_h) as f64,
                 ];
                 rectangle(color, r, c.transform, g);
             }
             ObjectPlaceholder::Mine => {
                 let color = [0.5, 0.3, 0.3, 0.75];
-                let point = point * ::PIXEL_SCALE;
-                let (x, y) = (point[0] as f64, point[1] as f64);
-                let size = (entities::MINE_SIZE + 4.) * ::PIXEL_SCALE;
-                let size = size as f64;
+                let (x, y) = ((point[0] * pixel_scale_w) as f64, (point[1] * pixel_scale_h) as f64);
+                let size = (entities::MINE_SIZE + 4.) * pixel_scale;
+                let size = Vector2::from([size[0] as f64, size[1] as f64]);
                 let hsize = size / 2.;
-                let r = [(x - hsize), (y - hsize), size, size];
+                let r = [(x - hsize[0]), (y - hsize[1]), size[0], size[1]];
                 ellipse(color, r, c.transform, g);
             }
             ObjectPlaceholder::Pump => {
                 let color = [1., 1., 0.25, 0.75];
-                let point = point * ::PIXEL_SCALE;
-                let (x, y) = (point[0] as f64, point[1] as f64);
-                let size = entities::PUMP_SIZE * ::PIXEL_SCALE;
-                let size = size as f64;
-                let hsize = size / 2.;
-                let r = [(x - hsize), (y - hsize), size, size];
+                let r = point_to_rect(point, [entities::PUMP_SIZE, entities::PUMP_SIZE], pixel_scale);
                 ellipse(color, r, c.transform, g);
             }
             ObjectPlaceholder::Gem => {
                 let color = [0.8, 0.2, 0.7, 0.75];
-                let point = point * ::PIXEL_SCALE;
-                let (x, y) = (point[0] as f64, point[1] as f64);
-                let size_w = entities::GEM_SIZE_W * ::PIXEL_SCALE;
-                let size_w = size_w as f64;
-                let hsize_w = size_w / 2.;
-                let size_h = entities::GEM_SIZE_H * ::PIXEL_SCALE;
-                let size_h = size_h as f64;
-                let hsize_h = size_h / 2.;
-                let r = [(x - hsize_w - 2.5), (y - hsize_h), size_w, size_h];
+                let r = point_to_rect(point, [entities::GEM_SIZE_W, entities::GEM_SIZE_H], pixel_scale);
                 ellipse(color, r, c.transform, g);
             }
             ObjectPlaceholder::Ball => {
                 let color = [0.5, 0.86, 1.0, 0.75];
-                let point = point * ::PIXEL_SCALE;
-                let (x, y) = (point[0] as f64, point[1] as f64);
-                let size = BALL_DEFAULT_SIZE * ::PIXEL_SCALE;
-                let size = size as f64;
-                let hsize = size / 2.;
-                let r = [(x - hsize), (y - hsize), size, size];
+                let r = point_to_rect(point, [BALL_DEFAULT_SIZE, BALL_DEFAULT_SIZE], pixel_scale);
                 ellipse(color, r, c.transform, g);
             }
             ObjectPlaceholder::Finish => {
                 let color = [1.0, 1.0, 1.0, 1.0];
-                let point = point * ::PIXEL_SCALE;
-                let (x, y) = (point[0] as f64, point[1] as f64);
-                let size = 8. as f64;
-                let hsize = size / 2.;
-                let r = [(x - hsize), (y - hsize - 12.), size, size + 16.];
+                let r = point_to_rect(point, [8., 24.], pixel_scale);
                 ellipse(color, r, c.transform, g);
             }
         }
     }
 
     fn exit(&mut self) {}
+}
+
+fn point_to_rect(point: Vector2<f32>, item_dims: [f32; 2], pixel_scale: Vector2<f32>) -> [f64; 4] {
+    let (x, y) = ((point[0] * pixel_scale[0]) as f64, (point[1] * pixel_scale[1]) as f64);
+    let size_w = item_dims[0] * pixel_scale[0];
+    let size_h = item_dims[1] * pixel_scale[1];
+    let hsize_w = (size_w * 0.5) as f64;
+    let hsize_h = (size_h * 0.5) as f64;
+    [(x - hsize_w as f64), (y - hsize_h as f64), size_w as f64, size_h as f64]
 }

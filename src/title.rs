@@ -130,7 +130,7 @@ where
         if let Some(selected) = self.selected {
             let window_size = WINDOW_SIZE;
             let window_n = selected as usize / WINDOW_SIZE;
-            let cw = c.trans(64., 164.);
+            let cw = c.trans(40., 112.);
             for (window_i, (i, lvl)) in self.level_list
                 .iter()
                 .enumerate()
@@ -138,13 +138,13 @@ where
                 .take(window_size)
                 .enumerate()
             {
-                let c = cw.trans(0., 38. * window_i as f64);
+                let c = cw.trans(0., 22. * window_i as f64);
                 let color = if selected == i as u32 {
                     [1.; 4]
                 } else {
                     [1.0, 1.0, 0.25, 1.0]
                 };
-                let _ = Text::new_color(color, 24).draw(
+                let _ = Text::new_color(color, 16).draw(
                     lvl.name(),
                     cache,
                     &DrawState::default(),
@@ -153,11 +153,11 @@ where
                 );
             }
 
-            let _ = Text::new_color([1.; 4], 11).draw(
+            let _ = Text::new_color([1.; 4], 10).draw(
                 "Press Shift+E to enter the level editor",
                 cache,
                 &DrawState::default(),
-                c.transform.trans(550., 582.),
+                c.transform.trans(302., 380.),
                 g,
             );
         }

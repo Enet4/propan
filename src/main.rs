@@ -20,48 +20,48 @@ extern crate serde_derive;
 extern crate serde_json;
 
 mod camera;
+mod controller;
 mod editor;
+mod game;
 mod level;
 mod physics;
-mod game;
-mod title;
 mod resource;
+mod title;
 mod util;
-mod controller;
 
-use std::path::Path;
-use clap::{App, SubCommand, Arg};
-use piston::window::{OpenGLWindow, Window, WindowSettings};
-use piston::event_loop::*;
-use piston::input::*;
-use glutin_window::{GlutinWindow, OpenGL};
-use graphics::Viewport;
-use graphics::character::CharacterCache;
-use gfx_graphics::{Filter, Gfx2d, GlyphCache, TextureSettings};
-use gfx::{CommandBuffer, Device, Resources, Slice};
+use clap::{App, Arg, SubCommand};
 use gfx::format::DepthStencil;
-use gfx::handle::{RenderTargetView, DepthStencilView};
+use gfx::format::{Formatted, Srgba8};
+use gfx::handle::{DepthStencilView, RenderTargetView};
+use gfx::memory::Typed;
 use gfx::pso::{PipelineData, PipelineState};
 use gfx::texture::{FilterMethod, SamplerInfo, WrapMode};
 use gfx::traits::*;
-use gfx::format::{Formatted, Srgba8};
-use gfx::memory::Typed;
+use gfx::{CommandBuffer, Device, Resources, Slice};
+use gfx_graphics::{Filter, Gfx2d, GlyphCache, TextureSettings};
+use glutin_window::{GlutinWindow, OpenGL};
+use graphics::character::CharacterCache;
+use graphics::Viewport;
+use piston::event_loop::*;
+use piston::input::*;
+use piston::window::{OpenGLWindow, Window, WindowSettings};
+use std::path::Path;
 
-use level::GameLevel;
 use controller::{Controller, ControllerAction, LevelId};
-use title::TitleController;
-use game::GameController;
 use editor::LevelEditorController;
+use game::GameController;
+use level::GameLevel;
 use resource::{AudioManager, ResourceManage, ResourceManager, SpriteManage, SpriteManager};
+use title::TitleController;
 
 type ColorFormat = Srgba8;
 type DepthFormat = gfx::format::DepthStencil;
 
 pub const WIDTH: u16 = 320;
 pub const HEIGHT: u16 = 200;
-pub const PHYSICAL_WIDTH: u16 = 960;
-pub const PHYSICAL_HEIGHT: u16 = 600;
-pub const PIXEL_SCALE: f32 = PHYSICAL_WIDTH as f32 / WIDTH as f32;
+pub const DEFAULT_PHYSICAL_WIDTH: u16 = 640;
+pub const DEFAULT_PHYSICAL_HEIGHT: u16 = 400;
+//pub const PIXEL_SCALE: f32 = DEFAULT_PHYSICAL_WIDTH as f32 / WIDTH as f32;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GameState {
@@ -71,14 +71,54 @@ pub enum GameState {
     Exit,
 }
 
+fn create_main_targets(
+    dim: gfx::texture::Dimensions,
+) -> (
+    gfx::handle::RenderTargetView<gfx_device_gl::Resources, gfx::format::Srgba8>,
+    gfx::handle::DepthStencilView<gfx_device_gl::Resources, gfx::format::DepthStencil>,
+) {
+    let color_format = <Srgba8 as Formatted>::get_format();
+    let depth_format = <DepthFormat as Formatted>::get_format();
+    let (output_color, output_stencil) =
+        gfx_device_gl::create_main_targets_raw(dim, color_format.0, depth_format.0);
+    let output_color: RenderTargetView<_, _> = Typed::new(output_color);
+    let output_stencil: DepthStencilView<_, _> = Typed::new(output_stencil);
+    (output_color, output_stencil)
+}
+
+fn create_physical_viewport(window: &GlutinWindow) -> Viewport {
+    let piston::window::Size { width, height } = window.size();
+    // physical viewport
+    Viewport {
+        rect: [0, 0, width as i32, height as i32],
+        draw_size: [width as u32, height as u32],
+        window_size: [width as u32, height as u32],
+    }
+}
+
+fn create_viewports(window: &GlutinWindow) -> (Viewport, Viewport) {
+    (
+        // logical viewport
+        Viewport {
+            rect: [0, 0, ::WIDTH as i32, ::HEIGHT as i32],
+            draw_size: [WIDTH as u32, HEIGHT as u32],
+            window_size: [WIDTH as u32, HEIGHT as u32],
+        },
+        create_physical_viewport(window),
+    )
+}
+
 fn main() {
     let args = App::new("Propan")
-        .subcommand(SubCommand::with_name("editor")
-            .help("Run the level editor")
-            .arg(Arg::with_name("FILE")
-                .index(1)
-                .help("The level file to load")
-                .required(false))
+        .subcommand(
+            SubCommand::with_name("editor")
+                .help("Run the level editor")
+                .arg(
+                    Arg::with_name("FILE")
+                        .index(1)
+                        .help("The level file to load")
+                        .required(false),
+                ),
         ).get_matches();
     let boot = if let Some(args) = args.subcommand_matches("editor") {
         ControllerAction::OpenEditor(args.value_of("FILE").map(String::from))
@@ -89,23 +129,21 @@ fn main() {
     // configure window
     let opengl = OpenGL::V3_2;
 
-    let phys_width: u32 = PHYSICAL_WIDTH as u32;
-    let phys_height: u32 = PHYSICAL_HEIGHT as u32;
-    let samples = 4;
+    let phys_width: u32 = DEFAULT_PHYSICAL_WIDTH as u32;
+    let phys_height: u32 = DEFAULT_PHYSICAL_HEIGHT as u32;
+    let samples = 0;
     let mut window: GlutinWindow = WindowSettings::new("propan", [phys_width, phys_height])
         .srgb(false)
         .vsync(true)
         .resizable(false)
         .opengl(opengl)
-        .samples(4)
+        .samples(samples)
         .exit_on_esc(false)
         .build()
         .unwrap();
 
-    let (mut device, mut factory) = gfx_device_gl::create(|s| {
-        window.get_proc_address(s) as *const std::os::raw::c_void
-    });
-    //let mut gl = GlGraphics::new(opengl);
+    let (mut device, mut factory) =
+        gfx_device_gl::create(|s| window.get_proc_address(s) as *const std::os::raw::c_void);
 
     // configure graphics
     let mut g2d = Gfx2d::new(opengl, &mut factory);
@@ -119,12 +157,7 @@ fn main() {
         1,
         aa.into(),
     );
-    let color_format = <Srgba8 as Formatted>::get_format();
-    let depth_format = <DepthFormat as Formatted>::get_format();
-    let (output_color, output_stencil) =
-        gfx_device_gl::create_main_targets_raw(dim, color_format.0, depth_format.0);
-    let output_color: RenderTargetView<_, _> = Typed::new(output_color);
-    let output_stencil: DepthStencilView<_, _> = Typed::new(output_stencil);
+    let (output_color, output_stencil) = create_main_targets(dim);
 
     let (_lowres_texture, lowres_resource_view, lowres_color) =
         factory.create_render_target(WIDTH, HEIGHT).unwrap();
@@ -137,8 +170,7 @@ fn main() {
             include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/shaders/main.glslv")),
             include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/shaders/main.glslf")),
             pipe::new(),
-        )
-        .unwrap();
+        ).unwrap();
     let (video_rect, indices) = get_video_rect();
     let (vertex_buffer, slice) = factory.create_vertex_buffer_with_slice(&video_rect, indices);
     let sampler = factory.create_sampler(SamplerInfo {
@@ -154,17 +186,10 @@ fn main() {
         orig: (lowres_resource_view, sampler),
         out: output_color.clone(),
     };
-    let logical_viewport = Viewport {
-        rect: [0, 0, ::WIDTH as i32, ::HEIGHT as i32],
-        draw_size: [WIDTH as u32, HEIGHT as u32],
-        window_size: [WIDTH as u32, HEIGHT as u32],
-    };
-    let physical_viewport = Viewport {
-        rect: [0, 0, phys_width as i32, phys_height as i32],
-        draw_size: [phys_width as u32, phys_height as u32],
-        window_size: [phys_width as u32, phys_height as u32],
-    };
 
+    // create initial viewports: logical viewport never changes,
+    // but the physical viewport may change on a window resize
+    let (logical_viewport, physical_viewport) = create_viewports(&window);
 
     // character cache
     let mut cache = GlyphCache::new(
@@ -209,7 +234,8 @@ fn main() {
                     logical_viewport,
                     physical_viewport,
                     &mut cache,
-                    &mut g2d);
+                    &mut g2d,
+                );
                 title.exit();
             }
             GameState::Game(id) => {
@@ -234,7 +260,8 @@ fn main() {
                     logical_viewport,
                     physical_viewport,
                     &mut cache,
-                    &mut g2d);
+                    &mut g2d,
+                );
                 game.exit();
             }
             GameState::Editor(path) => {
@@ -261,7 +288,8 @@ fn main() {
                     logical_viewport,
                     physical_viewport,
                     &mut cache,
-                    &mut g2d);
+                    &mut g2d,
+                );
                 editor.exit();
             }
             GameState::Exit => {
@@ -287,24 +315,36 @@ fn run_controller<C, M, D, R, PD, CB, CC, PM>(
     output_color: &RenderTargetView<R, Srgba8>,
     output_stencil: &DepthStencilView<R, DepthStencil>,
     logical_viewport: Viewport,
-    physical_viewport: Viewport,
+    mut physical_viewport: Viewport,
     cache: &mut CC,
     g2d: &mut Gfx2d<R>,
 ) -> GameState
 where
-    C: Controller<Res=M>,
-    D: Device<CommandBuffer=CB, Resources=R>,
+    C: Controller<Res = M>,
+    D: Device<CommandBuffer = CB, Resources = R>,
     M: ResourceManage,
-    <M as ResourceManage>::Sprite: SpriteManage<Texture=gfx_graphics::Texture<R>>, 
+    <M as ResourceManage>::Sprite: SpriteManage<Texture = gfx_graphics::Texture<R>>,
     R: Resources,
-    PD: PipelineData<R, Meta=PM>,
+    PD: PipelineData<R, Meta = PM>,
     CB: CommandBuffer<R>,
-    CC: CharacterCache<Texture=gfx_graphics::Texture<R>>,
+    CC: CharacterCache<Texture = gfx_graphics::Texture<R>>,
 {
+    let mut pixel_scale_w = physical_viewport.window_size[0] as f64 / WIDTH as f64;
+    let mut pixel_scale_h = physical_viewport.window_size[1] as f64 / HEIGHT as f64;
+
     // game loop
     while let Some(e) = events.next(window) {
+        // handle window closure
         if e.close_args().is_some() {
             return GameState::Exit;
+        }
+
+        // handle window resize
+        if e.resize_args().is_some() {
+            // reset physical viewport
+            physical_viewport = create_physical_viewport(&window);
+            pixel_scale_w = physical_viewport.window_size[0] as f64 / WIDTH as f64;
+            pixel_scale_h = physical_viewport.window_size[1] as f64 / HEIGHT as f64;
         }
 
         let a = game.event(&e);
@@ -353,6 +393,7 @@ where
             encoder.draw(&slice, lowres_pso, lowres_data);
             encoder.flush(device);
             if C::NEEDS_HI_RES {
+
                 g2d.draw(
                     encoder,
                     output_color,
