@@ -1,7 +1,7 @@
 use piston::input::GenericEvent;
 use graphics::{ellipse, Context, Graphics};
 use na::{norm_squared, Vector2};
-use physics::{rigid_bounce, AnimatedObject, Collidable, CollisionInfo, SimpleCollidable};
+use physics::{rigid_bounce, AnimatedObject, Collidable, CollisionInfo, SimpleCollidable, Positioned};
 use util::default_vector2;
 use resource::{ResourceManage, Result};
 
@@ -327,6 +327,13 @@ where
         if object.test_circle_collision_simple(self.ball.position(), self.ball.size() / 2.) {
             object.on_collision_simple(self);
         }
+    }
+}
+
+impl<R> Positioned for BallController<R>
+{
+    fn position(&self) -> Vector2<f32> {
+        self.ball.position()
     }
 }
 

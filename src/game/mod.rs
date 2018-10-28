@@ -1,18 +1,20 @@
-use piston::input::{GenericEvent, UpdateArgs};
-use graphics::{clear, Context, Graphics, Transformed};
 use graphics::character::CharacterCache;
+use graphics::{clear, Context, Graphics, Transformed};
+use piston::input::{GenericEvent, UpdateArgs};
 
 pub mod ball;
 pub mod entities;
 pub mod items;
+pub mod scene;
 pub mod wall;
 
-use self::entities::*;
 use self::ball::*;
+use self::entities::*;
+use self::scene::Scene;
 use self::wall::Wall;
-use level::GameLevel;
 use camera::*;
 use controller::{Controller, ControllerAction};
+use level::GameLevel;
 use resource::{GameTexture, ResourceManage, Result, SpriteAssetId, SpriteManage};
 
 pub struct GameController<R>
@@ -23,10 +25,10 @@ where
     ball: BallController<R>,
     camera: Camera,
     res: R,
-    walls: Vec<Wall<R>>,
+    walls: Scene<Wall<R>>,
     pumps: Vec<Pump<R>>,
-    mines: Vec<Mine<R>>,
-    gems: Vec<Gem<R>>,
+    mines: Scene<Mine<R>>,
+    gems: Scene<Gem<R>>,
     finish: Option<Finish<R>>,
 }
 
@@ -78,10 +80,10 @@ where
             ball,
             camera,
             res: resource_manager,
-            walls: walls?,
-            mines: mines?,
+            walls: Scene::from_objects(walls?),
+            mines: Scene::from_objects(mines?),
             pumps: pumps?,
-            gems: gems?,
+            gems: Scene::from_objects(gems?),
             finish,
         })
     }
@@ -96,7 +98,7 @@ where
         for i in 0.. {
             let path = format!("assets/{}.png", i);
             match sprite.new_sprite_from_path(SpriteAssetId::Other(i), path) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(_) => {
                     return Ok(());
                 }
@@ -168,8 +170,9 @@ where
             .handle_collision_with(self.level.map().up_border());
         self.ball
             .handle_collision_with(self.level.map().down_border());
-        // handle collisions with walls
-        for wall in &mut self.walls {
+
+        // handle collisions with scene
+        for wall in self.walls.at_mut(self.ball.position()) {
             self.ball.handle_collision_with(wall);
         }
         // handle contact with pumps
@@ -177,11 +180,11 @@ where
             self.ball.handle_simple_collision_with(pump);
         }
         // handle contact with mines
-        for mine in &self.mines {
+        for mine in self.mines.at(self.ball.position()) {
             self.ball.handle_simple_collision_with(mine);
         }
         // handle contact with gems
-        for gem in &mut self.gems {
+        for gem in self.gems.at_mut(self.ball.position()) {
             self.ball.handle_simple_collision_with(gem);
         }
         // handle contact with finish flag
@@ -225,9 +228,5 @@ where
         for pump in &self.pumps {
             pump.draw(c, g);
         }
-    }
-
-    fn exit(&mut self) {
-
     }
 }
