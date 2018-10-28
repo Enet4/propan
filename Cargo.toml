@@ -4,21 +4,29 @@ license = "MIT or Apache-2.0"
 name = "propan"
 version = "0.1.2"
 
+[features]
+default = ["sdl2_window"]
+glutin_window = ["pistoncore-glutin_window"]
+sdl2_window = ["pistoncore-sdl2_window"]
+
 [dependencies]
 clap = "2.32.0"
-derive_builder = "0.6.0"
-failure = "0.1.2"
-failure_derive = "0.1.2"
+derive_builder = "0.7.0"
+failure = "0.1.3"
+failure_derive = "0.1.3"
 gfx = "0.17.1"
 gfx_device_gl = "0.15.3"
 itertools = "0.7.8"
 piston = "0.37.0"
 piston2d-gfx_graphics = "0.52.0"
 piston2d-graphics = "0.26.0"
-pistoncore-glutin_window = "0.48.0"
+pistoncore-glutin_window = {version = "0.48.0", optional = true}
 serde = "1.0.80"
 serde_derive = "1.0.80"
 serde_json = "1.0.32"
+pistoncore-sdl2_window = {version = "0.50.0", optional = true}
+
+
 
 [dependencies.conrod]
 features = ["piston"]
@@ -26,4 +34,4 @@ version = "0.61.1"
 
 [dependencies.nalgebra]
 features = ["serde-serialize"]
-version = "0.16.5"
+version = "0.16.6"

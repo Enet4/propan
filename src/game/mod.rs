@@ -115,34 +115,33 @@ where
     type Res = R;
 
     fn event<E: GenericEvent>(&mut self, e: &E) -> Option<ControllerAction> {
-        use piston::input::{Button, ButtonState, Key};
+        use piston::input::Button::{Controller, Keyboard};
+        use piston::input::{ButtonState, ControllerButton, Key};
         self.ball.event(e);
         if let Some(b) = e.button_args() {
             // Set cell value.
-            if let Button::Keyboard(k) = b.button {
-                match (k, b.state, b.scancode) {
-                    (Key::Escape, ButtonState::Press, _) => {
+            match (b.button, b.state) {
+                (Keyboard(Key::Escape), ButtonState::Press) => {
+                    return Some(ControllerAction::LoadTitleScreen);
+                }
+                (Keyboard(Key::Return), ButtonState::Press)
+                | (Keyboard(Key::Space), ButtonState::Press)
+                | (Controller(ControllerButton { id: 0, button: 0 }), ButtonState::Press)
+                | (Controller(ControllerButton { id: 0, button: 1 }), ButtonState::Press) => {
+                    if self.ball.is_dead() || self
+                        .finish
+                        .as_ref()
+                        .map(|f| f.is_picked_up())
+                        .unwrap_or(false)
+                    {
                         return Some(ControllerAction::LoadTitleScreen);
                     }
-                    (Key::Return, ButtonState::Press, _) | (Key::Space, ButtonState::Press, _) => {
-                        if self.ball.is_dead() || self.finish.as_ref().map(|f| f.is_picked_up()).unwrap_or(false) {
-                            return Some(ControllerAction::LoadTitleScreen);
-                        }
-                    }
-                    (_k, _state, _scancode) => {
-                        //println!("KEY: {:?}, STATE: {:?}. SCANCODE: {:?}", k, state, scancode);
-                    }
+                }
+                _ => {
+                    // do nothing
                 }
             }
         }
-        /*
-        if let Some(k) = e.press_args() {
-            println!("PRESS: {:?}", k);
-        }
-        if let Some(k) = e.release_args() {
-            println!("RELEASE: {:?}", k);
-        }
-        */
 
         if let Some(k) = e.text_args() {
             if k == "E" {

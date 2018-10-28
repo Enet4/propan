@@ -9,7 +9,10 @@ extern crate failure_derive;
 extern crate gfx;
 extern crate gfx_device_gl;
 extern crate gfx_graphics;
+#[cfg(feature = "glutin_window")]
 extern crate glutin_window;
+#[cfg(feature = "sdl2_window")]
+extern crate sdl2_window;
 extern crate graphics;
 extern crate itertools;
 extern crate nalgebra as na;
@@ -30,8 +33,7 @@ mod title;
 mod util;
 
 use clap::{App, Arg, SubCommand};
-use gfx::format::DepthStencil;
-use gfx::format::{Formatted, Srgba8};
+use gfx::format::{DepthStencil, Formatted, Srgba8};
 use gfx::handle::{DepthStencilView, RenderTargetView};
 use gfx::memory::Typed;
 use gfx::pso::{PipelineData, PipelineState};
@@ -39,12 +41,15 @@ use gfx::texture::{FilterMethod, SamplerInfo, WrapMode};
 use gfx::traits::*;
 use gfx::{CommandBuffer, Device, Resources, Slice};
 use gfx_graphics::{Filter, Gfx2d, GlyphCache, TextureSettings};
+#[cfg(feature = "glutin_window")]
 use glutin_window::{GlutinWindow, OpenGL};
 use graphics::character::CharacterCache;
 use graphics::Viewport;
 use piston::event_loop::*;
 use piston::input::*;
 use piston::window::{OpenGLWindow, Window, WindowSettings};
+#[cfg(feature = "sdl2_window")]
+use sdl2_window::{OpenGL, Sdl2Window};
 use std::path::Path;
 
 use controller::{Controller, ControllerAction, LevelId};
@@ -57,11 +62,16 @@ use title::TitleController;
 type ColorFormat = Srgba8;
 type DepthFormat = gfx::format::DepthStencil;
 
+#[cfg(feature = "glutin_window")]
+type WindowBackend = GlutinWindow;
+
+#[cfg(feature = "sdl2_window")]
+type WindowBackend = Sdl2Window;
+
 pub const WIDTH: u16 = 320;
 pub const HEIGHT: u16 = 200;
-pub const DEFAULT_PHYSICAL_WIDTH: u16 = 640;
-pub const DEFAULT_PHYSICAL_HEIGHT: u16 = 400;
-//pub const PIXEL_SCALE: f32 = DEFAULT_PHYSICAL_WIDTH as f32 / WIDTH as f32;
+pub const DEFAULT_PHYSICAL_WIDTH: u16 = WIDTH * 3;
+pub const DEFAULT_PHYSICAL_HEIGHT: u16 = HEIGHT * 3;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GameState {
@@ -86,7 +96,10 @@ fn create_main_targets(
     (output_color, output_stencil)
 }
 
-fn create_physical_viewport(window: &GlutinWindow) -> Viewport {
+fn create_physical_viewport<W>(window: &W) -> Viewport
+where
+    W: Window,
+{
     let piston::window::Size { width, height } = window.size();
     // physical viewport
     Viewport {
@@ -96,7 +109,10 @@ fn create_physical_viewport(window: &GlutinWindow) -> Viewport {
     }
 }
 
-fn create_viewports(window: &GlutinWindow) -> (Viewport, Viewport) {
+fn create_viewports<W>(window: &W) -> (Viewport, Viewport)
+where
+    W: Window,
+{
     (
         // logical viewport
         Viewport {
@@ -106,6 +122,13 @@ fn create_viewports(window: &GlutinWindow) -> (Viewport, Viewport) {
         },
         create_physical_viewport(window),
     )
+}
+
+fn create_gfx_device<W>(window: &mut W) -> (gfx_device_gl::Device, gfx_device_gl::Factory)
+where
+    W: OpenGLWindow,
+{
+    gfx_device_gl::create(|s| window.get_proc_address(s) as *const std::os::raw::c_void)
 }
 
 fn main() {
@@ -132,7 +155,7 @@ fn main() {
     let phys_width: u32 = DEFAULT_PHYSICAL_WIDTH as u32;
     let phys_height: u32 = DEFAULT_PHYSICAL_HEIGHT as u32;
     let samples = 0;
-    let mut window: GlutinWindow = WindowSettings::new("propan", [phys_width, phys_height])
+    let mut window: WindowBackend = WindowSettings::new("propan", [phys_width, phys_height])
         .srgb(false)
         .vsync(true)
         .resizable(false)
@@ -140,10 +163,19 @@ fn main() {
         .samples(samples)
         .exit_on_esc(false)
         .build()
-        .unwrap();
+        .expect("Failed to create game window");
 
-    let (mut device, mut factory) =
-        gfx_device_gl::create(|s| window.get_proc_address(s) as *const std::os::raw::c_void);
+    #[cfg(feature = "sdl2_window")]
+    {
+        match window.init_joysticks() {
+            Ok(0) => println!("No joystick detected."),
+            Ok(1) => println!("Joystick detected."),
+            Ok(n) => println!("Joysticks detected (use controller #0 of {}).", n),
+            Err(e) => println!("Failed to detect joysticks: {}", e),
+        }
+    }
+
+    let (mut device, mut factory) = create_gfx_device(&mut window);
 
     // configure graphics
     let mut g2d = Gfx2d::new(opengl, &mut factory);
@@ -300,11 +332,11 @@ fn main() {
 }
 
 #[inline]
-fn run_controller<C, M, D, R, PD, CB, CC, PM>(
+fn run_controller<C, M, W, D, R, PD, CB, CC, PM>(
     game: &mut C,
     _resource_manager: M,
     events: &mut Events,
-    window: &mut GlutinWindow,
+    window: &mut W,
     device: &mut D,
     encoder: &mut gfx::Encoder<R, CB>,
     slice: &Slice<R>,
@@ -322,6 +354,7 @@ fn run_controller<C, M, D, R, PD, CB, CC, PM>(
 where
     C: Controller<Res = M>,
     D: Device<CommandBuffer = CB, Resources = R>,
+    W: Window,
     M: ResourceManage,
     <M as ResourceManage>::Sprite: SpriteManage<Texture = gfx_graphics::Texture<R>>,
     R: Resources,
@@ -329,8 +362,8 @@ where
     CB: CommandBuffer<R>,
     CC: CharacterCache<Texture = gfx_graphics::Texture<R>>,
 {
-    let mut pixel_scale_w = physical_viewport.window_size[0] as f64 / WIDTH as f64;
-    let mut pixel_scale_h = physical_viewport.window_size[1] as f64 / HEIGHT as f64;
+    let mut pixel_scale_w = physical_viewport.window_size[0] as f64 / f64::from(WIDTH);
+    let mut pixel_scale_h = physical_viewport.window_size[1] as f64 / f64::from(HEIGHT);
 
     // game loop
     while let Some(e) = events.next(window) {
@@ -342,9 +375,9 @@ where
         // handle window resize
         if e.resize_args().is_some() {
             // reset physical viewport
-            physical_viewport = create_physical_viewport(&window);
-            pixel_scale_w = physical_viewport.window_size[0] as f64 / WIDTH as f64;
-            pixel_scale_h = physical_viewport.window_size[1] as f64 / HEIGHT as f64;
+            physical_viewport = create_physical_viewport(&*window);
+            pixel_scale_w = physical_viewport.window_size[0] as f64 / f64::from(WIDTH);
+            pixel_scale_h = physical_viewport.window_size[1] as f64 / f64::from(HEIGHT);
         }
 
         let a = game.event(&e);
@@ -393,7 +426,6 @@ where
             encoder.draw(&slice, lowres_pso, lowres_data);
             encoder.flush(device);
             if C::NEEDS_HI_RES {
-
                 g2d.draw(
                     encoder,
                     output_color,

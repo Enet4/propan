@@ -189,26 +189,51 @@ where
 
     /// Handles events.
     pub fn event<E: GenericEvent>(&mut self, e: &E) {
-        use piston::input::{Button, ButtonState, Key};
+        use piston::input::{ButtonState, ControllerAxisArgs, Key};
+        use piston::input::Button::Keyboard;
         if let Some(b) = e.button_args() {
             // Set cell value.
-            if let Button::Keyboard(k) = b.button {
-                match (k, b.state, b.scancode) {
-                    (Key::Right, state, _) | (Key::NumPad6, state, _) => {
-                        self.thrust_right = state == ButtonState::Press;
+            match b.button {
+                Keyboard(Key::Right) | Keyboard(Key::NumPad6) => {
+                    self.thrust_right = b.state == ButtonState::Press;
                     }
-                    (Key::Left, state, _) | (Key::NumPad4, state, _) => {
-                        self.thrust_left = state == ButtonState::Press;
+                Keyboard(Key::Left) | Keyboard(Key::NumPad4) => {
+                    self.thrust_left = b.state == ButtonState::Press;
                     }
-                    (Key::Up, state, _) | (Key::NumPad8, state, _) => {
-                        self.thrust_up = state == ButtonState::Press;
+                Keyboard(Key::Up) | Keyboard(Key::NumPad8) => {
+                    self.thrust_up = b.state == ButtonState::Press;
                     }
-                    (Key::Down, state, _) | (Key::NumPad2, state, _) => {
-                        self.thrust_down = state == ButtonState::Press;
+                Keyboard(Key::Down) | Keyboard(Key::NumPad2) => {
+                    self.thrust_down = b.state == ButtonState::Press;
                     }
                     _ => {
                         // do nothing
                     }
+                }
+        } else if let Some(ControllerAxisArgs { id: 0, axis, position}) = e.controller_axis_args() {
+            match axis {
+                0 =>  {
+                    // horizontal axis
+                    if position.abs() > 0.1 {
+                        self.thrust_right = position > 0.;
+                        self.thrust_left = position < 0.;
+                    } else {
+                        self.thrust_right = false;
+                        self.thrust_left = false;
+            }
+        }
+                1 =>  {
+                    // vertical axis
+                    if position.abs() > 0.1 {
+                        self.thrust_down = position > 0.;
+                        self.thrust_up = position < 0.;
+                    } else {
+                        self.thrust_down = false;
+                        self.thrust_up = false;
+                    }
+                }
+                _ => {
+                    // ignore this one
                 }
             }
         }

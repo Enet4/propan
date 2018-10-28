@@ -18,6 +18,7 @@ where
     logo_pos: f64,
     level_list: Vec<GameLevelHeader>,
     selected: Option<u32>,
+    controller_moved: bool,
 }
 
 impl<R> TitleController<R>
@@ -38,6 +39,7 @@ where
             logo_pos: -120.0,
             level_list: vec![],
             selected: None,
+            controller_moved: false,
         })
     }
 }
@@ -49,44 +51,83 @@ where
     const NEEDS_HI_RES: bool = true;
 
     fn event<E: GenericEvent>(&mut self, e: &E) -> Option<ControllerAction> {
-        use piston::input::{Button, ButtonState, Key};
+        use piston::input::{ButtonState, ControllerButton, ControllerAxisArgs, Key};
+        use piston::input::Button::{Controller, Keyboard};
         if let Some(b) = e.button_args() {
             // Set cell value.
-            if let Button::Keyboard(k) = b.button {
-                match (self.selected.is_some(), k, b.state) {
-                    (_, Key::Escape, ButtonState::Press) => {
-                        return Some(ControllerAction::Exit);
+            match (self.selected.is_some(), b.button, b.state) {
+                (_, Keyboard(Key::Escape), ButtonState::Press) => {
+                    return Some(ControllerAction::Exit);
+                }
+                (false, _, ButtonState::Press) => {
+                    // load levels
+                    // TODO do not unwrap this error, treat this better
+                    self.level_list = load_all_level_headers("levels").unwrap();
+                    self.selected = Some(0);
+                }
+                (true, Keyboard(Key::Return), ButtonState::Press) |
+                (true, Keyboard(Key::Space), ButtonState::Press) |
+                (true, Controller(ControllerButton {id: 0, button: 0}), ButtonState::Press) |
+                (true, Controller(ControllerButton {id: 0, button: 1}), ButtonState::Press) => {
+                    return Some(ControllerAction::LoadGame(self.selected.unwrap() as LevelId));
+                }
+                (true, Keyboard(Key::Right), ButtonState::Press) |
+                (true, Keyboard(Key::NumPad6), ButtonState::Press) => {
+                    self.selected = self.selected.map(|s| {
+                        u32::min(s + WINDOW_SIZE as u32, self.level_list.len() as u32 - 1)
+                    });
+                }
+                (true, Keyboard(Key::Left), ButtonState::Press) |
+                (true, Keyboard(Key::NumPad4), ButtonState::Press) => {
+                    self.selected = self.selected.map(|s| s.saturating_sub(WINDOW_SIZE as u32));
+                }
+                (true, Keyboard(Key::Up), ButtonState::Press) |
+                (true, Keyboard(Key::NumPad8), ButtonState::Press) => {
+                    self.selected = self.selected.map(|s| s.saturating_sub(1));
+                }
+                (true, Keyboard(Key::Down), ButtonState::Press) |
+                (true, Keyboard(Key::NumPad2), ButtonState::Press) => {
+                    self.selected = self.selected
+                        .map(|s| u32::min(s + 1, self.level_list.len() as u32 - 1));
+                }
+                _ => {}
+            }
+        } else if let Some(ControllerAxisArgs { id: 0, axis, position}) = e.controller_axis_args() {
+            match axis {
+                0 =>  {
+                    // horizontal axis, move page by page
+                    if position.abs() > 0.2 {
+                        if !self.controller_moved {
+                            if position > 0. {
+                                self.selected = self.selected.map(|s| {
+                                    u32::min(s + WINDOW_SIZE as u32, self.level_list.len() as u32 - 1)
+                                });
+                            } else {
+                                self.selected = self.selected.map(|s| s.saturating_sub(WINDOW_SIZE as u32));
+                            }
+                            self.controller_moved = true;
+                        }
+                    } else {
+                        self.controller_moved = false;
                     }
-                    (false, _, ButtonState::Press) => {
-                        // load levels
-                        // TODO do not unwrap this error, treat this better
-                        self.level_list = load_all_level_headers("levels").unwrap();
-                        self.selected = Some(0);
+                }
+                1 =>  {
+                    // vertical axis, move one by one
+                    if position.abs() > 0.2 {
+                        if !self.controller_moved {
+                            if position > 0. {
+                                self.selected = self.selected.map(|s| u32::min(s + 1, self.level_list.len() as u32 - 1));
+                            } else {
+                                self.selected = self.selected.map(|s| s.saturating_sub(1));
+                            }
+                            self.controller_moved = true;
+                        }
+                    } else {
+                        self.controller_moved = false;
                     }
-                    (true, Key::Return, ButtonState::Press) |
-                    (true, Key::Space, ButtonState::Press) => {
-                        return Some(ControllerAction::LoadGame(self.selected.unwrap() as LevelId));
-                    }
-                    (true, Key::Right, ButtonState::Press) |
-                    (true, Key::NumPad6, ButtonState::Press) => {
-                        self.selected = self.selected.map(|s| {
-                            u32::min(s + WINDOW_SIZE as u32, self.level_list.len() as u32 - 1)
-                        });
-                    }
-                    (true, Key::Left, ButtonState::Press) |
-                    (true, Key::NumPad4, ButtonState::Press) => {
-                        self.selected = self.selected.map(|s| s.saturating_sub(WINDOW_SIZE as u32));
-                    }
-                    (true, Key::Up, ButtonState::Press) |
-                    (true, Key::NumPad8, ButtonState::Press) => {
-                        self.selected = self.selected.map(|s| s.saturating_sub(1));
-                    }
-                    (true, Key::Down, ButtonState::Press) |
-                    (true, Key::NumPad2, ButtonState::Press) => {
-                        self.selected = self.selected
-                            .map(|s| u32::min(s + 1, self.level_list.len() as u32 - 1));
-                    }
-                    _ => {}
+                }
+                _ => {
+                    // ignore this one
                 }
             }
         }
@@ -128,9 +169,10 @@ where
     {
 
         if let Some(selected) = self.selected {
+            let draw_size = c.viewport.unwrap().draw_size;
             let window_size = WINDOW_SIZE;
             let window_n = selected as usize / WINDOW_SIZE;
-            let cw = c.trans(40., 112.);
+            let cw = c.trans(24., 108.);
             for (window_i, (i, lvl)) in self.level_list
                 .iter()
                 .enumerate()
@@ -138,7 +180,7 @@ where
                 .take(window_size)
                 .enumerate()
             {
-                let c = cw.trans(0., 22. * window_i as f64);
+                let c = cw.trans(0., 30. * window_i as f64);
                 let color = if selected == i as u32 {
                     [1.; 4]
                 } else {
@@ -153,11 +195,12 @@ where
                 );
             }
 
+            let text_pos = (draw_size[0] as f64 - 340., draw_size[1] as f64 - 8.);
             let _ = Text::new_color([1.; 4], 10).draw(
                 "Press Shift+E to enter the level editor",
                 cache,
                 &DrawState::default(),
-                c.transform.trans(302., 380.),
+                c.transform.trans(text_pos.0, text_pos.1),
                 g,
             );
         }
