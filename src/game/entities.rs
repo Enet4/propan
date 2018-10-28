@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use na::{norm_squared, Vector2};
-use physics::{AnimatedObject, SimpleCollidable};
+use physics::{AnimatedObject, SimpleCollidable, Positioned};
 use graphics::{ellipse, Context, DrawState, Graphics, Image, Transformed, ImageSize};
 use resource::{GameTexture, ResourceManage, Result, SpriteManage};
 use resource::sprite::AssetId;
@@ -76,6 +76,15 @@ where
     }
 }
 
+impl<R> Positioned for Pump<R>
+where
+    R: ResourceManage,
+{
+    fn position(&self) -> Vector2<f32> {
+        self.pos
+    }
+}
+
 impl<'a, R> SimpleCollidable for &'a mut Pump<R>
 where
     R: ResourceManage,
@@ -110,6 +119,15 @@ where
     pos: Vector2<f32>,
     gfx_img: GameTexture<R>,
     res: R,
+}
+
+impl<R> Positioned for Mine<R>
+where
+    R: ResourceManage,
+{
+    fn position(&self) -> Vector2<f32> {
+        self.pos
+    }
 }
 
 impl<R> Mine<R>
@@ -171,6 +189,14 @@ where
     picked_up: bool,
 }
 
+impl<R> Positioned for Gem<R>
+where
+    R: ResourceManage,
+{
+    fn position(&self) -> Vector2<f32> {
+        self.pos
+    }
+}
 
 impl<R> Gem<R>
 where
