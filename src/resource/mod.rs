@@ -3,6 +3,7 @@ use gfx_device_gl::{Factory, Resources};
 
 pub mod sprite;
 pub mod audio;
+pub mod config;
 
 pub use self::sprite::{SpriteManage, SpriteManager, AssetId as SpriteAssetId};
 pub use self::audio::{AudioManage, AudioManager};
