@@ -5,7 +5,7 @@ name = "propan"
 version = "0.1.2"
 
 [features]
-default = ["sdl2_window"]
+default = ["glutin_window"]
 glutin_window = ["pistoncore-glutin_window"]
 sdl2_window = ["pistoncore-sdl2_window"]
 
