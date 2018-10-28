@@ -1,5 +1,28 @@
 use na::{dot, norm_squared, Vector2};
 
+/// Trait for things that have a position in game space.
+pub trait Positioned {
+    fn position(&self) -> Vector2<f32>;
+}
+
+impl<'a, T: ?Sized> Positioned for &'a T
+where
+    T: Positioned,
+{
+    fn position(&self) -> Vector2<f32> {
+        (**self).position()
+    }
+}
+
+impl<'a, T: ?Sized> Positioned for &'a mut T
+where
+    T: Positioned,
+{
+    fn position(&self) -> Vector2<f32> {
+        (**self).position()
+    }
+}
+
 /// A trait for things that move in the level.
 pub trait AnimatedObject {
     /// Request the object to bounce.
@@ -93,7 +116,10 @@ pub trait SimpleCollidable {
     fn on_collision_simple<A>(&mut self, ball: &mut A) where A: AnimatedObject;
 }
 
-impl<'a, T: SimpleCollidable> SimpleCollidable for &'a mut T {
+impl<'a, T: ?Sized> SimpleCollidable for &'a mut T
+where
+    T: SimpleCollidable,
+{
     fn test_circle_collision_simple(&self, position: Vector2<f32>, radius: f32) -> bool {
         (**self).test_circle_collision_simple(position, radius)
     }
