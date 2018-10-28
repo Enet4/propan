@@ -5,9 +5,13 @@ use physics::{rigid_bounce, AnimatedObject, Collidable, CollisionInfo, SimpleCol
 use util::default_vector2;
 use resource::{ResourceManage, Result};
 
-const BALL_CAPACITY: f32 = 34.;
 pub const BALL_DEFAULT_SIZE: f32 = 28.;
+const BALL_CAPACITY: f32 = 34.;
+const DECREASE_FACTOR: f32 = -0.011;
+const THRUST_FORCE: f32 = 0.04;
+const COLLISION_DAMPENING: f32 = 0.01;
 const TOO_MUCH_SPEED_SQR: f32 = 22.;
+const TOO_MUCH_SPEED_RESISTANCE: f32 = 0.005;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Ball {
@@ -196,35 +200,35 @@ where
             match b.button {
                 Keyboard(Key::Right) | Keyboard(Key::NumPad6) => {
                     self.thrust_right = b.state == ButtonState::Press;
-                    }
+                }
                 Keyboard(Key::Left) | Keyboard(Key::NumPad4) => {
                     self.thrust_left = b.state == ButtonState::Press;
-                    }
+                }
                 Keyboard(Key::Up) | Keyboard(Key::NumPad8) => {
                     self.thrust_up = b.state == ButtonState::Press;
-                    }
+                }
                 Keyboard(Key::Down) | Keyboard(Key::NumPad2) => {
                     self.thrust_down = b.state == ButtonState::Press;
-                    }
-                    _ => {
-                        // do nothing
-                    }
                 }
+                _ => {
+                    // do nothing
+                }
+            }
         } else if let Some(ControllerAxisArgs { id: 0, axis, position}) = e.controller_axis_args() {
             match axis {
                 0 =>  {
                     // horizontal axis
-                    if position.abs() > 0.1 {
+                    if position.abs() > 0.5 {
                         self.thrust_right = position > 0.;
                         self.thrust_left = position < 0.;
                     } else {
                         self.thrust_right = false;
                         self.thrust_left = false;
-            }
-        }
+                    }
+                }
                 1 =>  {
                     // vertical axis
-                    if position.abs() > 0.1 {
+                    if position.abs() > 0.5 {
                         self.thrust_down = position > 0.;
                         self.thrust_up = position < 0.;
                     } else {
@@ -250,12 +254,12 @@ where
             let overlap = self.acc_overlaps / self.num_overlaps as f32;
             self.correct_and_rigid_bounce(overlap);
             // dampen velocity a little bit
-            self.ball.decay_velocity(6e-3);
+            self.ball.decay_velocity(COLLISION_DAMPENING);
             self.acc_overlaps = default_vector2();
             self.num_overlaps = 0;
         }
 
-        let thrust_force: f32 = 6.0e-2 * factor;
+        let thrust_force: f32 = THRUST_FORCE * factor;
         let mut total_effort = 0;
         if self.thrust_right {
             self.ball.thrust([thrust_force, 0.]);
@@ -275,11 +279,11 @@ where
         }
 
         if self.ball.speed_sqr() > TOO_MUCH_SPEED_SQR {
-            self.ball.decay_velocity(5e-3);
+            self.ball.decay_velocity(TOO_MUCH_SPEED_RESISTANCE);
         }
 
         self.ball.update_position(factor);
-        self.ball.add_size(total_effort as f32 * -1.2e-2 * factor);
+        self.ball.add_size(total_effort as f32 * DECREASE_FACTOR * factor);
     }
 
     #[inline]
