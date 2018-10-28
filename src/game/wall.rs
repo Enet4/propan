@@ -1,5 +1,5 @@
 use graphics::{Context, DrawState, Graphics, Image, Transformed, ImageSize};
-use physics::{AnimatedObject, Collidable, CollisionInfo};
+use physics::{AnimatedObject, Collidable, CollisionInfo, Positioned};
 use na::{norm_squared, Vector2};
 use resource::{GameTexture, ResourceManage, Result};
 use resource::sprite::{AssetId, SpriteManage};
@@ -27,6 +27,10 @@ where
         })
     }
 
+    pub fn position(&self) -> Vector2<f32> {
+        self.pos
+    }
+
     pub fn draw<G>(&self, ctx: Context, g: &mut G)
     where
         G: Graphics<Texture=GameTexture<R>>,
@@ -40,7 +44,15 @@ where
             .trans(x as f64, y as f64)
             .scale(w_scale.into(), h_scale.into());
         Image::new().draw(&self.gfx_tex, &DrawState::default(), ctx.transform, g);
+    }
+}
 
+impl<R> Positioned for Wall<R>
+where
+    R: ResourceManage,
+{
+    fn position(&self) -> Vector2<f32> {
+        self.pos
     }
 }
 
